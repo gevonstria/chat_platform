@@ -1,0 +1,51 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Django Chat Alpha</title>
+<link rel="stylesheet" type="text/css" href="{% static 'bootstrap-4.0.0/css/bootstrap.min.css' %}">
+<style type="text/css">
+body {
+    padding-top: 300px;
+}
+
+</style>
+
+</head>
+
+<body>
+    <nav class="navbar fixed-top navbar-dark bg-dark">
+        <a class="navbar-brand" href="#">Django Chat Alpha</a>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-6 col-md-4"></div>
+            <div class="col-6 col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                    <h5 class="card-title">Log In</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <input type="text" class="form-control" placeholder="Enter username" name="username">
+                            </div>
+                            <div class="form-group">
+                                <input type="password" class="form-control" placeholder="Enter password" name=password>
+                            </div>
+                            <button type="submit" class="btn btn-dark">Submit</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-md-4"></div>
+        </div>
+    </div>
+
+<script src="{% static 'bootstrap-4.0.0/js/bootstrap.min.js' %}"></script>
+</body>
+</html>

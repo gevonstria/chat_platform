@@ -1,0 +1,194 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Django Chat Alpha</title>
+<link rel="stylesheet" type="text/css" href="{% static 'bootstrap-4.0.0/css/bootstrap.min.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'fontawesome/css/all.min.css' %}">
+<style type="text/css">
+body {
+    padding-top: 300px;
+}
+
+#btn-chat {
+    position:fixed;
+    bottom:5px;
+    right:10px;
+    margin:0px;
+}
+
+#chat-modal-dialog {
+    position:fixed;
+    bottom:0px;
+    right:5px;
+    margin:0px;
+}
+
+#chat-modal-content{
+    height: 500px;
+    width: 500px;
+}
+
+#container-chat{
+    height: 350px;
+    overflow: scroll;
+}
+
+.sender{
+    float: right;
+}
+
+.receiver{
+    float: left;
+}
+
+</style>
+
+</head>
+
+<body>
+    <nav class="navbar fixed-top navbar-dark bg-dark">
+        <a class="navbar-brand" href="#">Django Chat Alpha Sample Client</a>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-6 col-md-4"></div>
+            <div class="col-6 col-md-4"></div>
+            <div class="col-6 col-md-4"></div>
+            <button id="btn-chat" type="button" class="btn btn-dark" data-toggle="modal" data-target="#chat_modal"><i class="fas fa-comments"></i></button>
+        </div>
+    </div>
+
+<!-- Modal -->
+<div class="modal" id="chat_modal" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" data-backdrop="false">
+  <div class="modal-dialog" role="document" id="chat-modal-dialog">
+    <div class="modal-content" id="chat-modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel"><i class="fas fa-comments"></i> Chat with us</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="chat-init" style="text-align: center;">
+            <p>Talk with us!</p>
+            <div class="input-group">
+            <select id="chat_type" class="custom-select" id="inputGroupSelect02">
+                <option selected>Choose...</option>
+                <option value="sales">Sales</option>
+                <option value="support">Support</option>
+            </select>
+            <div class="input-group-append">
+                <button id="btn-chat-init" class="btn btn-dark" type="button"><i class="fas fa-paper-plane"></i></button>
+            </div>
+            </div>
+        </div>
+        <div class="chat-window">
+            <div id="container-chat">
+                
+            </div>
+            <div class="input-group mb-3">
+                <input id="chat-message-input" type="text" class="form-control" placeholder="..." aria-label="Recipient's username" aria-describedby="basic-addon2">
+                <div class="input-group-append">
+                    <button id="chat-message-submit" class="btn btn-dark" type="button"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'bootstrap-4.0.0/js/bootstrap.min.js' %}"></script>
+<script>
+    $( document ).ready(function() {
+
+        var user_id = "{{ user_id }}";
+        var post_data = {}
+        var chatSocket = new WebSocket('ws://' + window.location.host +'/ws/chat/default_customer/');
+        var user = "{{ user }}";
+
+        $(".chat-window").hide();
+
+        $( "#btn-chat-init" ).on( "click", function() {
+            $(".chat-init").hide();
+            $(".chat-window").show();
+
+            var chat_type = $('#chat_type').find(":selected").text();
+
+            post_data = {
+                "user_id": user_id,
+                "chat_type": chat_type
+            }
+
+            $.post( "/chat/new", post_data)
+                .done(function( data ) {
+                chatSocket = new WebSocket('ws://' + window.location.host +'/ws/chat/' + data["chat_room_name"] + '/');
+                display_message("system", "system", "You are on queue, someone will accommodate you shortly.");
+
+                
+
+                chatSocket.onmessage = function(e) {
+                    var data = JSON.parse(e.data);
+                    console.log(data);
+                    var message = data['message'];
+                    var event_user = data['user'];
+
+                    display_message(event_user, user, message);
+
+                };
+
+                chatSocket.onclose = function(e) {
+                    console.error('Chat socket closed unexpectedly');
+                }
+
+            });
+        });
+
+
+        $( "#chat-message-input" ).keyup(function(e) {
+            if(e.keyCode == 13){
+                $('#chat-message-submit').click();
+            }
+        });
+
+        $( "#chat-message-submit" ).click(function() {
+            var message = $('#chat-message-input').val();
+            chatSocket.send(JSON.stringify({'message': message, 'user': user}));
+            $('#chat-message-input').val("");
+        });
+
+
+        function display_message(to, from, message){
+            var out = document.getElementById("container-chat");
+            var isScrolledToBottom = out.scrollHeight - out.clientHeight <= out.scrollTop + 1;
+
+            // document.querySelector('#chat-log').value += (message + '\n');
+            var chat_html = "<div class='card'>";
+            chat_html += "<div class='card-body sender'>";
+            if(from === "system"){
+                chat_html += "<p class='sender'>" +message +"</p>";
+            }else if(from === to){
+                chat_html += "<p class='sender'>" +message +"</p>";
+            }else{
+                chat_html += "<p class='receiver'>" +message +"</p>";
+            }
+            chat_html += "</div>";
+            chat_html += "</div>";
+
+            $(chat_html).appendTo( "#container-chat" );
+
+            //scroll down always after update
+            if(!isScrolledToBottom){
+                out.scrollTop = out.scrollHeight - out.clientHeight;
+            }
+
+        }
+    });
+</script>
+</body>
+</html>

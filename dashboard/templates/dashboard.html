@@ -1,0 +1,171 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Django Chat Alpha</title>
+<link rel="stylesheet" type="text/css" href="{% static 'bootstrap-4.0.0/css/bootstrap.min.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'fontawesome/css/all.min.css' %}">
+<style type="text/css">
+body {
+    padding-top: 60px;
+}
+
+.header{
+    color: #fff;
+}
+
+.button-right{
+    float: right;
+}
+
+.account-menu{
+    left: -115px;
+}
+
+.chat-status-play{
+    color: green;
+    float: right;
+}
+
+</style>
+
+</head>
+
+<body>
+    <nav class="navbar fixed-top navbar-dark bg-dark">
+        <a class="navbar-brand" href="#">Django Chat Alpha</a>
+        <div class="form-inline my-lg-0 mr-2 header">
+            <div>{{ username }}</div>
+            <div class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle header" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="fas fa-cogs"></i>
+                </a>
+                <div class="dropdown-menu account-menu" aria-labelledby="navbarDropdown">
+                    <a class="dropdown-item" href="#">...</a>
+                    <a class="dropdown-item" href="#">...</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="#">Log Out</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-sm">
+                <div class="btn-group" role="group" aria-label="Basic example"></div>
+            </div>
+            <div class="col-sm"></div>
+            <div class="col-sm"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-8">
+                <div class="card">
+                    <div class="card-header bg-dark header">
+                    Chat Sessions
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group">
+                            <li class="list-group-item">Cras justo odio <span class="chat-status-play"><i class="fas fa-play"></i></span></li>
+                            <li class="list-group-item">Dapibus ac facilisis in <span class="chat-status-play"><i class="fas fa-play"></i></span></li>
+                            <li class="list-group-item">Morbi leo risus <span class="chat-status-play"><i class="fas fa-play"></i></span></li>
+                            <li class="list-group-item">Porta ac consectetur ac <span class="chat-status-play"><i class="fas fa-play"></i></span></li>
+                            <li class="list-group-item">Vestibulum at eros <span class="chat-status-play"><i class="fas fa-play"></i></span></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="card">
+                    <div class="card-header bg-dark header">
+                    On Queue
+                    </div>
+                    <div class="card-body">
+                        <ul id="chat-list-on-queue" class="list-group list-group-flush">
+                            <!-- append on queue chat rooms here -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Modal -->
+<div class="modal fade" id="assign-modal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalLabel">Idle Agents</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="input-group mb-3">
+            <input type="text" class="form-control" placeholder="Recipient's username" aria-label="Recipient's username" aria-describedby="basic-addon2">
+            <div class="input-group-append">
+                <span class="input-group-text" id="basic-addon2"><i class="fas fa-search"></i></span>
+            </div>
+        </div>
+        <ul id="agent-idle-list" class="list-group idle-group">
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'bootstrap-4.0.0/js/bootstrap.min.js' %}"></script>
+<script type="text/javascript">
+    $( document ).ready(function() {
+
+        var chat_room_id = 0;
+        $.getJSON( "/chat/on_q", function( data ) {
+            console.log(data);
+            $.each(data, function(key,value) {
+                on_q_html = "<li class='list-group-item'>";
+                on_q_html += data[key]["type"] +" - " +data[key]["customer"];
+                on_q_html += "<button id='"+key +"'type='button' class='btn btn-secondary button-right chat-list-item'>";
+                on_q_html += "<i class='far fa-arrow-alt-circle-right'></i></button></li>";
+
+                $(on_q_html).appendTo("#chat-list-on-queue");
+            }); 
+        });
+
+        $.getJSON( "/chat/agents/idle", function( data ) {
+            console.log(data);
+            $.each(data, function(key,value) {
+                agent_idle_html = "<li class='list-group-item'>";
+                agent_idle_html += data[key]["group"] +" - " +data[key]["username"];
+                agent_idle_html += "<button id='" +key +"' chat='' type='button' class='btn btn-success button-right agent-idle'>";
+                agent_idle_html += "<i class='fas fa-user-tag'></i></button></li>";
+                $(agent_idle_html).appendTo("#agent-idle-list");
+            });
+        });
+
+        $( "#chat-list-on-queue" ).on( "click", ".chat-list-item", function(e) {
+            chat_room_id = $(this).attr("id");
+            $("#assign-modal").modal('show');
+        });
+
+        $( ".idle-group" ).on( "click", ".agent-idle", function(e) {
+            user_id = $(this).attr("id");
+            post_data = {
+                "user_id": user_id,
+                "chat_room_id": chat_room_id
+            }
+
+            console.log(post_data);
+            $.post( "/chat/assign", post_data)
+                .done(function( data ) {
+                console.log(data);
+                $("#assign-modal").modal('hide');
+            });
+        });
+
+    });
+</script>
+</body>
+</html>

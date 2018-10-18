@@ -1,0 +1,175 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Django Chat Alpha</title>
+<link rel="stylesheet" type="text/css" href="{% static 'bootstrap-4.0.0/css/bootstrap.min.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'fontawesome/css/all.min.css' %}">
+<style type="text/css">
+body {
+    padding-top: 60px;
+}
+
+.header{
+    color: #fff;
+}
+
+.button-right{
+    float: right;
+}
+
+.account-menu{
+    left: -115px;
+}
+
+#container-chat{
+    height: 400px;
+    overflow: scroll;
+}
+
+.sender{
+    float: right;
+}
+
+.receiver{
+    float: left;
+}
+
+</style>
+
+</head>
+
+<body>
+    <nav class="navbar fixed-top navbar-dark bg-dark">
+        <a class="navbar-brand" href="#">Django Chat Alpha</a>
+        <div class="form-inline my-lg-0 mr-2 header">
+            <div>{{ username }}</div>
+            <div class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle header" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <i class="fas fa-cogs"></i>
+                </a>
+                <div class="dropdown-menu account-menu" aria-labelledby="navbarDropdown">
+                    <a class="dropdown-item" href="#">...</a>
+                    <a class="dropdown-item" href="#">...</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="#">Log Out</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-sm">
+                <div class="btn-group" role="group" aria-label="Basic example">
+                    <button type="button" class="btn btn-secondary"><i class="far fa-arrow-alt-circle-right"></i></button>
+                    <button type="button" class="btn btn-secondary"><i class="far fa-stop-circle"></i></button>
+                </div>
+            </div>
+            <div class="col-sm"></div>
+            <div class="col-sm"></div>
+        </div>
+        <div class="row">
+            <div class="col-sm-8">
+                <div class="card">
+                    <div class="card-header bg-dark header">
+                    Chat Panel
+                    </div>
+                    <div class="card-body">
+                        <div id="container-chat">
+                            
+                        </div>
+                        <div class="input-group mb-3">
+                            <input id="chat-message-input" type="text" class="form-control" placeholder="..." aria-label="Recipient's username" aria-describedby="basic-addon2">
+                            <div class="input-group-append">
+                                <button id="chat-message-submit" class="btn btn-dark" type="button"><i class="fas fa-paper-plane"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="card">
+                    <div class="card-header bg-dark header">
+                    My Queue
+                    </div>
+                    <div class="card-body">
+                        <ul id="my-queue" class="list-group list-group-flush">
+                            
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script src="{% static 'js/jquery-3.3.1.min.js' %}"></script>
+<script src="{% static 'bootstrap-4.0.0/js/bootstrap.min.js' %}"></script>
+<script type="text/javascript">
+    $( document ).ready(function() {
+
+        $.getJSON( "/chat/agents/queue/{{ user_id }}", function( data ) {
+            console.log(data);
+            $.each(data, function(key,value) {
+                queue_html = "<li class='list-group-item'>" +data[key]["name"];
+                queue_html += "<a id='" +key +"'class='btn btn-secondary button-right btn-queue' href='/dashboard/agent/" +data[key]["name"] +"'>";
+                queue_html += "<i class='far fa-arrow-alt-circle-right' style='color: white;'></i></a></li>";
+
+                $(queue_html).appendTo("#my-queue");
+            });
+        });
+
+        var roomName = "{{ room_name }}";
+        var chatSocket = new WebSocket('ws://' + window.location.host +'/ws/chat/' + roomName + '/');
+        var user = "{{ username }}";
+
+        chatSocket.onmessage = function(e) {
+            var data = JSON.parse(e.data);
+            console.log(data);
+            var message = data['message'];
+            var event_user = data['user'];
+
+            var out = document.getElementById("container-chat");
+            var isScrolledToBottom = out.scrollHeight - out.clientHeight <= out.scrollTop + 1;
+            console.log(isScrolledToBottom);
+
+            // document.querySelector('#chat-log').value += (message + '\n');
+            var chat_html = "<div class='card'>";
+            chat_html += "<div class='card-body sender'>";
+            if(event_user === user){
+                chat_html += "<p class='sender'>" +message +"</p>";
+            }else{
+                chat_html += "<p class='receiver'>" +message +"</p>";
+            }
+            chat_html += "</div>";
+            chat_html += "</div>";
+
+            $(chat_html).appendTo( "#container-chat" );
+
+            //scroll down always after update
+            if(!isScrolledToBottom){
+                out.scrollTop = out.scrollHeight - out.clientHeight;
+            }
+        };
+
+        chatSocket.onclose = function(e) {
+            console.error('Chat socket closed unexpectedly');
+        }
+
+        $( "#chat-message-input" ).keyup(function(e) {
+            if(e.keyCode == 13){
+                $('#chat-message-submit').click();
+            }
+        });
+
+        $( "#chat-message-submit" ).click(function() {
+            var message = $('#chat-message-input').val();
+            chatSocket.send(JSON.stringify({'message': message, 'user': user}));
+            $('#chat-message-input').val("");
+        });
+    });
+</script>
+</body>
+</html>
